@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "shortame"
+version = "0.1.0"
+description = "A (not so) simple url shortener."
+authors = ["Matheus Lino <matheus@mrlino.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
