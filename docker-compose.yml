@@ -5,6 +5,14 @@ networks:
     driver: bridge
 
 services:
+  create-dynamodb-table:
+    build:
+      dockerfile: ./create-table.dockerfile
+    networks:
+      - app-tier
+    depends_on:
+      - dynamodb-local
+
   dynamodb-local:
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
     image: "amazon/dynamodb-local:latest"
