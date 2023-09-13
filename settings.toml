@@ -1,2 +1,3 @@
+[local]
 DYNAMODB_ENDPOINT = "http://localhost:8000"
 AWS_REGION_NAME = "sa-east-1"
