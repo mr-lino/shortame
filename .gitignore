@@ -162,3 +162,5 @@ cython_debug/
 # Docker
 docker/
 .docker/
+# Ignore dynaconf secret files
+.secrets.*
