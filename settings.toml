@@ -1,3 +1,6 @@
 [local]
-DYNAMODB_ENDPOINT = "http://localhost:8000" # if running on container use "http://dynamodb-local:8000
+# if running on container use "http://dynamodb-local:8000"
+DYNAMODB_ENDPOINT = "http://localhost:8000"
 AWS_REGION_NAME = "sa-east-1"
+REDIS_HOST = "localhost"
+REDIS_PORT = "6379"
