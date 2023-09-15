@@ -1,47 +1,87 @@
 # File with adapter for dynamodb usage
-from dataclasses import asdict
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 
-from loguru import logger
+import boto3
 from botocore.exceptions import ClientError
-from mypy_boto3_dynamodb.service_resource import Table, DynamoDBServiceResource
+from loguru import logger
+from loguru._logger import Logger
+# from moto import mock_dynamodb
+from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource, Table
 
+from shortame.config import settings
 from shortame.domain.model import Url
 
+dyn_resource = boto3.resource(
+    "dynamodb",
+    endpoint_url=settings.dynamodb_endpoint,
+    aws_access_key_id=settings.aws_access_key_id,
+    aws_secret_access_key=settings.aws_secret_access_key,
+    region_name=settings.aws_region_name,
+)
 
-class AbstractDynamoDBTable(ABC):
+
+# @mock_dynamodb
+# def get_fake_dyn_resource():
+#     return boto3.resource(
+#         "dynamodb",
+#         aws_access_key_id="fake_id",
+#         aws_secret_access_key="fake_key",
+#         aws_session_token="fake_session",
+#         region_name="sa-east1",
+#     )
+class ShortURLNotFound(Exception):
+    pass
+
+
+class AbstractDynamoDBUrlTable(ABC):
+    """Abstract Dynamo DB table"""
+
     @abstractmethod
     def _load_table(self):
         pass
 
     @abstractmethod
-    def add(self):
+    def add_url(self):
         pass
 
     @abstractmethod
-    def get(self):
+    def get_url(self):
         pass
 
 
-class FakeDynamoDBTable(AbstractDynamoDBTable):
-    def __init__(self, table_name: str):
-        self.table_name = table_name
-        self._contents = {}
-    
-    def _load_table(self):
-        return True
-    
-    def add(self, url: Url):
-        self._contents.update({url.short_url: asdict(url)})
+# class FakeUrlTable(AbstractDynamoDBUrlTable):
+#     def __init__(
+#         self,
+#         dyn_resource: DynamoDBServiceResource = get_fake_dyn_resource(),
+#         table_name: str = "url",
+#         logger: Logger = logger,
+#     ):
+#         self.dyn_resource = dyn_resource
+#         self.table_name = table_name
+#         self.logger = logger
+#         self.table = self._load_table(self.table_name)
 
-    def get(self, short_url: str) -> dict[str, str, str, str] | None:
-        return self._contents.get(short_url)
+#     def _load_table(self, table_name: str):
+#         return self.dyn_resource.Table(table_name)
+
+#     def add_url(self, url: Url):
+#         self.table.put_item(Item=asdict(url))
+
+#     def get_url(self, short_url: str) -> dict[str, str, str, str] | None:
+#         response = self.table.get_item(Key={"short_url": short_url})
+#         return response.get("Item")
 
 
-class UrlTable(AbstractDynamoDBTable):
+class UrlTable(AbstractDynamoDBUrlTable):
     """Encapsulates an Amazon DynamoDB table of shortened urls."""
 
-    def __init__(self, dyn_resource: DynamoDBServiceResource, table_name: str = "url"):
+    def __init__(
+        self,
+        dyn_resource: DynamoDBServiceResource = dyn_resource,
+        table_name: str = "url",
+        logger: Logger = logger,
+    ):
         """
         Initializes a UrlTable object.
 
@@ -50,12 +90,13 @@ class UrlTable(AbstractDynamoDBTable):
         """
         self.dyn_resource = dyn_resource
         self.table_name = table_name
+        self.logger = logger
         self.table = self._load_table(table_name)
 
     def _load_table(self, table_name: str) -> Table:
         """Tries to load a table using the table's name."""
         try:
-            logger.info(f"Attempting to load table '{self.table_name}'")
+            self.logger.info(f"Attempting to load table '{self.table_name}'")
             table = self.dyn_resource.Table(self.table_name)
             table.load()
         except ClientError as err:
@@ -64,41 +105,50 @@ class UrlTable(AbstractDynamoDBTable):
             else:
                 error_response = err.response["Error"]["Code"]
                 error_message = err.response["Error"]["Message"]
-                logger.error(
+                self.logger.error(
                     f"Couldn't check for existence of {table_name}. Here's why: {error_response}: {error_message}",
                 )
                 raise
         else:
             return table
 
-    def add(self, url: Url) -> None:
+    def add_url(self, url: Url) -> None:
         """Add Url object to the database."""
         try:
-            logger.info(f"Adding url {url.short_url} to database")
+            self.logger.info(f"Adding url {url.short_url} to database")
             self.table.put_item(Item=asdict(url))
         except ClientError as err:
             error_code = err.response["Error"]["Code"]
             error_message = err.response["Error"]["Message"]
-            logger.error(
-                f"Couldn't add url {url.short_url} to table {self.table_name}. Here's why: {error_code}: {error_message}"
+            self.logger.error(
+                f"Couldn't add url {url.short_url} to table {self.table_name}."
             )
+            self.logger.error(f"Here's why: {error_code}: {error_message}")
             raise
 
-    def get(self, short_url: str) -> dict[str, str, str, str] | None:
+    def get_url(self, short_url: str) -> dict[str, str, str, str] | None:
         """
-        Gets a url from the database given a short_url input.
+        Gets a original long url from the database given a short_url input.
 
         :param short_url: the path of the shortened url, e.g.: xyz1234
         :return:
         """
         try:
+            self.logger.info(
+                f"Attempting to get '{short_url}' from  {self.table_name} table"
+            )
             response = self.table.get_item(Key={"short_url": short_url})
         except ClientError as err:
             error_code = err.response["Error"]["Code"]
             error_message = err.response["Error"]["Message"]
-            logger.error(
-                "Couldn't get short_url '{short_url}' from url table. Here's why: {error_code}: {error_message}"
+            self.logger.error(
+                f"Couldn't get short_url '{short_url}' from {self.table_name} table."
             )
+            self.logger.error(f"Here's why: {error_code}: {error_message}")
             raise
         else:
+            if not response.get("Item"):
+                raise ShortURLNotFound(
+                    f"Short url '{short_url}' does not exist on {self.table_name} table"
+                )
             return response.get("Item")
