@@ -23,6 +23,10 @@ class AbstractRedisQueue(ABC):
     def enqueue_short_url_key():
         pass
 
+    @abstractmethod
+    def current_size():
+        pass
+
 
 class FakeShortUrlQueue(AbstractRedisQueue):
     """Fake implementation of a ShortURLQueue for testing purposes."""
@@ -43,6 +47,9 @@ class FakeShortUrlQueue(AbstractRedisQueue):
 
     def enqueue_short_url_key(self, short_url: str) -> int:
         return self.redis_client.lpush(self.queue_name, short_url)
+    
+    def current_size(self, short_url: str) -> int:
+        return self.redis_client.llen(self.queue_name)
 
 
 class ShortUrlQueue(AbstractRedisQueue):
@@ -78,10 +85,23 @@ class ShortUrlQueue(AbstractRedisQueue):
 
     def enqueue_short_url_key(self, short_url: str) -> int:
         try:
+            self.logger.info(f"Enqueing short url on queue {self.queue_name}")
             queue_size = self.redis_client.lpush(self.queue_name, short_url)
         except Exception as e:
             self.logger.error(
                 f"Error while enqueing short url on queue {self.queue_name}"
+            )
+            raise e
+        else:
+            return queue_size
+    
+    def current_size(self) -> int:
+        try:
+            self.logger.info(f"Fetching the current size of queue {self.queue_name}")
+            queue_size = self.redis_client.llen(self.queue_name)
+        except Exception as e:
+            self.logger.error(
+                f"Error while fetching the current size of queue {self.queue_name}"
             )
             raise e
         else:
