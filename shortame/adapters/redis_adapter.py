@@ -14,7 +14,7 @@ r = Redis(**get_redis_host_and_port())
 class EmptyQueueException(Exception):
     pass
 
-class ShortUrlNotFound(Exception):
+class ShortUrlNotFoundOnCache(Exception):
     pass
 
 class AbstractUrlQueue(ABC):
@@ -82,7 +82,7 @@ class FakeCacheQueue(AbstractCacheQueue):
             raise e
         else:
             if not long_url:
-                raise ShortUrlNotFound
+                raise ShortUrlNotFoundOnCache
             return long_url.decode('utf-8')
 
 class ShortUrlQueue(AbstractUrlQueue):
@@ -146,13 +146,14 @@ class CacheQueue(AbstractCacheQueue):
         self.logger = logger
         self.ttl = 30*24*60*60
     
-    def add(self, url: Url):
+    def add(self, url: Url) -> bool:
         try:
             self.logger.info(f"Adding url {url} to the cache")
-            self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
+            added = self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
         except Exception as e:
             self.logger.error(f"Error while adding {Url} to the cache")
             raise e
+        return added
 
     def get(self, short_url: str) -> str:
         try:
@@ -163,7 +164,7 @@ class CacheQueue(AbstractCacheQueue):
             raise e
         else:
             if not long_url:
-                raise ShortUrlNotFound(f"Short url '{short_url}' not found on cache")
+                raise ShortUrlNotFoundOnCache(f"Short url '{short_url}' not found on cache")
             self.logger.info(f"Long url for the given key is '{long_url.decode('utf-8')[:20]}'")
             return long_url.decode('utf-8')
 
