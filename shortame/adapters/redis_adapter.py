@@ -6,6 +6,7 @@ from loguru._logger import Logger
 from redis import Redis
 
 from shortame.config import get_redis_host_and_port
+from shortame.domain.model import Url
 
 r = Redis(**get_redis_host_and_port())
 
@@ -13,22 +14,32 @@ r = Redis(**get_redis_host_and_port())
 class EmptyQueueException(Exception):
     pass
 
+class ShortUrlNotFound(Exception):
+    pass
 
-class AbstractRedisQueue(ABC):
+class AbstractUrlQueue(ABC):
     @abstractmethod
-    def deque_short_url_key():
+    def deque_short_url_key(self):
         pass
 
     @abstractmethod
-    def enqueue_short_url_key():
+    def enqueue_short_url_key(self):
         pass
 
     @abstractmethod
-    def current_size():
+    def current_size(self):
         pass
 
+class AbstractCacheQueue(ABC):
+    @abstractmethod
+    def add(self):
+        pass
 
-class FakeShortUrlQueue(AbstractRedisQueue):
+    @abstractmethod
+    def get(self):
+        pass
+
+class FakeShortUrlQueue(AbstractUrlQueue):
     """Fake implementation of a ShortURLQueue for testing purposes."""
 
     def __init__(
@@ -52,7 +63,29 @@ class FakeShortUrlQueue(AbstractRedisQueue):
         return self.redis_client.llen(self.queue_name)
 
 
-class ShortUrlQueue(AbstractRedisQueue):
+class FakeCacheQueue(AbstractCacheQueue):
+    def __init__(self, redis_client: FakeStrictRedis = FakeStrictRedis(version=7), logger: Logger = logger):
+        self.redis_client = redis_client
+        self.logger = logger
+        self.ttl = 30*24*60*60
+    
+    def add(self, url: Url):
+        try:
+            self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
+        except Exception as e:
+            raise e
+
+    def get(self, short_url: str) -> str:
+        try:
+            long_url = self.redis_client.get(short_url)
+        except Exception as e:
+            raise e
+        else:
+            if not long_url:
+                raise ShortUrlNotFound
+            return long_url.decode('utf-8')
+
+class ShortUrlQueue(AbstractUrlQueue):
     """Encapsulates the Redis queue containing available short urls"""
 
     def __init__(
@@ -106,3 +139,31 @@ class ShortUrlQueue(AbstractRedisQueue):
             raise e
         else:
             return queue_size
+
+class CacheQueue(AbstractCacheQueue):
+    def __init__(self, redis_client: Redis = r, logger: Logger = logger):
+        self.redis_client = redis_client
+        self.logger = logger
+        self.ttl = 30*24*60*60
+    
+    def add(self, url: Url):
+        try:
+            self.logger.info(f"Adding url {url} to the cache")
+            self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
+        except Exception as e:
+            self.logger.error(f"Error while adding {Url} to the cache")
+            raise e
+
+    def get(self, short_url: str) -> str:
+        try:
+            self.logger.info(f"Retrieving short url '{short_url}' from cache")
+            long_url = self.redis_client.get(short_url)
+        except Exception as e:
+            self.logger.error(f"Error while getting '{short_url}' from cache")
+            raise e
+        else:
+            if not long_url:
+                raise ShortUrlNotFound(f"Short url '{short_url}' not found on cache")
+            self.logger.info(f"Long url for the given key is '{long_url.decode('utf-8')[:20]}'")
+            return long_url.decode('utf-8')
+
