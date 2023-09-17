@@ -1,6 +1,7 @@
 [default]
 AWS_REGION_NAME = "sa-east-1"
 SHORT_URL_MINIMUM_QUEUE_SIZE = 1000
+DOMAIN_NAME = "http://localhost:5000"
 
 [local]
 # if running on container use "http://dynamodb-local:8000"
