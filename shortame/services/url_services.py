@@ -1,10 +1,14 @@
-from abc import ABC, abstractmethod, abstractclassmethod
+from abc import ABC, abstractmethod
 
 from loguru import logger
 from loguru._logger import Logger
 
-from shortame.adapters.redis_adapter import AbstractUrlQueue, AbstractCacheQueue, ShortUrlQueue, CacheQueue, EmptyQueueException, ShortUrlNotFound
-from shortame.adapters.dynamodb_adapter import AbstractDynamoDBUrlTable, UrlTable
+from shortame.adapters.dynamodb_adapter import (AbstractDynamoDBUrlTable,
+                                                UrlTable)
+from shortame.adapters.redis_adapter import (AbstractCacheQueue,
+                                             AbstractUrlQueue, CacheQueue,
+                                             ShortUrlNotFoundOnCache,
+                                             ShortUrlQueue)
 from shortame.domain.model import Url
 
 
@@ -14,15 +18,15 @@ class AbstractUrlShortener(ABC):
         pass
 
     @abstractmethod
-    def fetch_new_short_url(self):
+    def _fetch_new_short_url(self):
         pass
 
     @abstractmethod
-    def persist_on_table(self):
+    def _persist_on_table(self):
         pass
 
     @abstractmethod
-    def add_on_cache(self):
+    def _add_on_cache(self):
         pass
 
     @abstractmethod
@@ -45,24 +49,45 @@ class UrlShortener(AbstractUrlShortener):
 
     def shorten_and_persist(self, long_url: str) -> Url:
         try:
-            short_url = self.fetch_new_short_url()
+            short_url = self._fetch_new_short_url()
             url = Url(short_url=short_url, long_url=long_url)
-            self.persist_on_table(url)
+            self._persist_on_table(url)
         except Exception as e:
-            self.logger.error("Error while shortening and persisting url", exc_info=True)
+            self.logger.error(
+                "Error while shortening and persisting url", exc_info=True
+            )
             raise e
         else:
-            self.add_on_cache(url)
+            self._add_on_cache(url)
             return url
 
-    def fetch_new_short_url(self) -> str:
+    def _fetch_new_short_url(self) -> str:
         return self.queue.deque_short_url_key()
 
-    def persist_on_table(self, url: Url):
+    def _persist_on_table(self, url: Url):
         return self.table.add_url(url)
 
-    def add_on_cache(self, url: Url):
+    def _add_on_cache(self, url: Url):
         return self.cache.add(url)
 
-    def get_long_url(self):
-        pass
+    def get_long_url(self, short_url: str):
+        try:
+            long_url = self.cache.get(short_url)
+        except ShortUrlNotFoundOnCache:
+            try:
+                url = self.table.get_url(short_url)
+                return url["long_url"]
+            except Exception as e:
+                self.logger.error(
+                    f"Error while retrieving correspoding long url from '{short_url}' from table"
+                )
+                raise e
+            pass
+        except Exception as e:
+            self.logger.error(
+                f"Error while retrieving corresponding long url from '{short_url}' from cache",
+                exc_info=True,
+            )
+            raise e
+        else:
+            return long_url
