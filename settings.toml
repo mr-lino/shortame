@@ -1,6 +1,14 @@
+[default]
+AWS_REGION_NAME = "sa-east-1"
+SHORT_URL_MINIMUM_QUEUE_SIZE = 1000
+
 [local]
 # if running on container use "http://dynamodb-local:8000"
 DYNAMODB_ENDPOINT = "http://localhost:8000"
-AWS_REGION_NAME = "sa-east-1"
 REDIS_HOST = "localhost"
+REDIS_PORT = "6379"
+
+[container]
+DYNAMODB_ENDPOINT = 'http://dynamodb:8000'
+REDIS_HOST = "redis"
 REDIS_PORT = "6379"
