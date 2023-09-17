@@ -3,7 +3,7 @@ from time import sleep
 from loguru import logger
 
 from shortame.config import settings
-from shortame.key_generation import ShortUrlGenerator
+from shortame.services.key_generation_services import ShortUrlGenerator
 
 if __name__ == "__main__":
     logger.add(sink="key_generator.log")
