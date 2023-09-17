@@ -5,15 +5,32 @@ networks:
     driver: bridge
 
 services:
+  key-generator:
+    build: 
+      dockerfile: ./key-generator.dockerfile
+    networks:
+      - app-tier
+    environment:
+      - ENV_FOR_DYNACONF=container
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - create-dynamodb-table
+      - dynamodb
+      - redis
+
   create-dynamodb-table:
     build:
       dockerfile: ./create-table.dockerfile
     networks:
       - app-tier
+    environment:
+      - ENV_FOR_DYNACONF=container
     depends_on:
-      - dynamodb-local
+      - dynamodb
 
-  dynamodb-local:
+  dynamodb:
     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
     image: "amazon/dynamodb-local:latest"
     container_name: dynamodb-local
