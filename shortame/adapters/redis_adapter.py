@@ -148,10 +148,10 @@ class CacheQueue(AbstractCacheQueue):
     
     def add(self, url: Url) -> bool:
         try:
-            self.logger.info(f"Adding url {url} to the cache")
+            self.logger.info(f"Adding url '{url}' to the cache")
             added = self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
         except Exception as e:
-            self.logger.error(f"Error while adding {Url} to the cache")
+            self.logger.error(f"Error while adding {url} to the cache")
             raise e
         return added
 
@@ -165,6 +165,6 @@ class CacheQueue(AbstractCacheQueue):
         else:
             if not long_url:
                 raise ShortUrlNotFoundOnCache(f"Short url '{short_url}' not found on cache")
-            self.logger.info(f"Long url for the given key is '{long_url.decode('utf-8')[:20]}'")
+            self.logger.info(f"Long url for the given key is '{long_url.decode('utf-8')[:30]}...'")
             return long_url.decode('utf-8')
 

@@ -1,6 +1,7 @@
 # File with adapter for dynamodb usage
 from abc import ABC, abstractmethod
 from dataclasses import asdict
+from typing import Dict
 
 import boto3
 from botocore.exceptions import ClientError
@@ -30,7 +31,7 @@ dyn_resource = boto3.resource(
 #         aws_session_token="fake_session",
 #         region_name="sa-east1",
 #     )
-class ShortURLNotFound(Exception):
+class ShortUrlNotFoundOnTable(Exception):
     pass
 
 
@@ -117,6 +118,7 @@ class UrlTable(AbstractDynamoDBUrlTable):
         try:
             self.logger.info(f"Adding url {url.short_url} to database")
             self.table.put_item(Item=asdict(url))
+            self.logger.info(f"Successfully added url '{url}' on table")
         except ClientError as err:
             error_code = err.response["Error"]["Code"]
             error_message = err.response["Error"]["Message"]
@@ -126,12 +128,12 @@ class UrlTable(AbstractDynamoDBUrlTable):
             self.logger.error(f"Here's why: {error_code}: {error_message}")
             raise
 
-    def get_url(self, short_url: str) -> dict[str, str, str, str] | None:
+    def get_url(self, short_url: str) -> Dict[str, str] | None:
         """
         Gets a original long url from the database given a short_url input.
 
         :param short_url: the path of the shortened url, e.g.: xyz1234
-        :return:
+        :return url: the url dict with the long and short versions
         """
         try:
             self.logger.info(
@@ -142,13 +144,14 @@ class UrlTable(AbstractDynamoDBUrlTable):
             error_code = err.response["Error"]["Code"]
             error_message = err.response["Error"]["Message"]
             self.logger.error(
-                f"Couldn't get short_url '{short_url}' from {self.table_name} table."
+                f"Couldn't get short url '{short_url}' from {self.table_name} table."
             )
             self.logger.error(f"Here's why: {error_code}: {error_message}")
             raise
         else:
             if not response.get("Item"):
-                raise ShortURLNotFound(
+                raise ShortUrlNotFoundOnTable(
                     f"Short url '{short_url}' does not exist on {self.table_name} table"
                 )
+            self.logger.info(f"Successfully fetched url '{url.__str__}' from table")
             return response.get("Item")
