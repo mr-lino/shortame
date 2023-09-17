@@ -1,10 +1,11 @@
 from time import sleep
+
 from loguru import logger
-from shortame.key_generation import ShortUrlGenerator
+
 from shortame.config import settings
+from shortame.key_generation import ShortUrlGenerator
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     logger.add(sink="key_generator.log")
     logger.info("Executing the Key Generator service")
     keygen = ShortUrlGenerator()

@@ -14,8 +14,10 @@ r = Redis(**get_redis_host_and_port())
 class EmptyQueueException(Exception):
     pass
 
+
 class ShortUrlNotFoundOnCache(Exception):
     pass
+
 
 class AbstractUrlQueue(ABC):
     @abstractmethod
@@ -30,6 +32,7 @@ class AbstractUrlQueue(ABC):
     def current_size(self):
         pass
 
+
 class AbstractCacheQueue(ABC):
     @abstractmethod
     def add(self):
@@ -38,6 +41,7 @@ class AbstractCacheQueue(ABC):
     @abstractmethod
     def get(self):
         pass
+
 
 class FakeShortUrlQueue(AbstractUrlQueue):
     """Fake implementation of a ShortURLQueue for testing purposes."""
@@ -58,17 +62,21 @@ class FakeShortUrlQueue(AbstractUrlQueue):
 
     def enqueue_short_url_key(self, short_url: str) -> int:
         return self.redis_client.lpush(self.queue_name, short_url)
-    
+
     def current_size(self, short_url: str) -> int:
         return self.redis_client.llen(self.queue_name)
 
 
 class FakeCacheQueue(AbstractCacheQueue):
-    def __init__(self, redis_client: FakeStrictRedis = FakeStrictRedis(version=7), logger: Logger = logger):
+    def __init__(
+        self,
+        redis_client: FakeStrictRedis = FakeStrictRedis(version=7),
+        logger: Logger = logger,
+    ):
         self.redis_client = redis_client
         self.logger = logger
-        self.ttl = 30*24*60*60
-    
+        self.ttl = 30 * 24 * 60 * 60
+
     def add(self, url: Url):
         try:
             self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
@@ -83,7 +91,8 @@ class FakeCacheQueue(AbstractCacheQueue):
         else:
             if not long_url:
                 raise ShortUrlNotFoundOnCache
-            return long_url.decode('utf-8')
+            return long_url.decode("utf-8")
+
 
 class ShortUrlQueue(AbstractUrlQueue):
     """Encapsulates the Redis queue containing available short urls"""
@@ -127,7 +136,7 @@ class ShortUrlQueue(AbstractUrlQueue):
             raise e
         else:
             return queue_size
-    
+
     def current_size(self) -> int:
         try:
             self.logger.info(f"Fetching the current size of queue {self.queue_name}")
@@ -140,12 +149,13 @@ class ShortUrlQueue(AbstractUrlQueue):
         else:
             return queue_size
 
+
 class CacheQueue(AbstractCacheQueue):
     def __init__(self, redis_client: Redis = r, logger: Logger = logger):
         self.redis_client = redis_client
         self.logger = logger
-        self.ttl = 30*24*60*60
-    
+        self.ttl = 30 * 24 * 60 * 60
+
     def add(self, url: Url) -> bool:
         try:
             self.logger.info(f"Adding url '{url}' to the cache")
@@ -164,7 +174,10 @@ class CacheQueue(AbstractCacheQueue):
             raise e
         else:
             if not long_url:
-                raise ShortUrlNotFoundOnCache(f"Short url '{short_url}' not found on cache")
-            self.logger.info(f"Long url for the given key is '{long_url.decode('utf-8')[:30]}...'")
-            return long_url.decode('utf-8')
-
+                raise ShortUrlNotFoundOnCache(
+                    f"Short url '{short_url}' not found on cache"
+                )
+            self.logger.info(
+                f"Long url for the given key is '{long_url.decode('utf-8')[:30]}...'"
+            )
+            return long_url.decode("utf-8")

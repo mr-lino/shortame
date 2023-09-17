@@ -1,5 +1,3 @@
-from os import environ
-
 from dynaconf import Dynaconf
 
 settings = Dynaconf(

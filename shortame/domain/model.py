@@ -7,4 +7,4 @@ class Url:
     long_url: str
 
     def __str__(self):
-        return "{"+f"{self.short_url}: {self.long_url[:30]}..."+"}"
+        return "{" + f"{self.short_url}: {self.long_url[:30]}..." + "}"

@@ -26,6 +26,7 @@ app.add_middleware(
 
 shortener = UrlShortener()
 
+
 @app.post("/url", status_code=status.HTTP_200_OK)
 async def url(long_url: Annotated[HttpUrl, Body(embed=True)]) -> Dict[str, str]:
     url = shortener.shorten_and_persist(long_url=long_url.unicode_string())

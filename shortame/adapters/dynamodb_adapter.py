@@ -153,5 +153,6 @@ class UrlTable(AbstractDynamoDBUrlTable):
                 raise ShortUrlNotFoundOnTable(
                     f"Short url '{short_url}' does not exist on {self.table_name} table"
                 )
-            self.logger.info(f"Successfully fetched url '{url.__str__}' from table")
-            return response.get("Item")
+            url = response.get("Item")
+            self.logger.info(f"Successfully fetched url '{url}' from table")
+            return url
