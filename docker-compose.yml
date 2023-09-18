@@ -1,15 +1,22 @@
 version: '3.8'
 
-networks:
-  app-tier:
-    driver: bridge
-
 services:
+  app:
+    build:
+      dockerfile: ./app.dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ENV_FOR_DYNACONF=container
+    depends_on:
+      - key-generator
+      - create-dynamodb-table
+      - dynamodb
+      - redis
+
   key-generator:
     build: 
       dockerfile: ./key-generator.dockerfile
-    networks:
-      - app-tier
     environment:
       - ENV_FOR_DYNACONF=container
     deploy:
@@ -23,8 +30,6 @@ services:
   create-dynamodb-table:
     build:
       dockerfile: ./create-table.dockerfile
-    networks:
-      - app-tier
     environment:
       - ENV_FOR_DYNACONF=container
     depends_on:
@@ -39,8 +44,6 @@ services:
     volumes:
       - "./docker/dynamodb:/home/dynamodblocal/data"
     working_dir: /home/dynamodblocal
-    networks:
-      - app-tier
 
   redis:
     image: 'bitnami/redis:latest'
@@ -48,5 +51,3 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "6379:6379"
-    networks:
-      - app-tier

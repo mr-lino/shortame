@@ -6,7 +6,7 @@ from loguru import logger
 from loguru._logger import Logger
 
 from shortame.adapters.dynamodb_adapter import (AbstractDynamoDBUrlTable,
-                                                ShortURLNotFound, UrlTable)
+                                                ShortUrlNotFoundOnTable, UrlTable)
 from shortame.adapters.redis_adapter import AbstractUrlQueue, ShortUrlQueue
 
 
@@ -60,7 +60,7 @@ class ShortUrlGenerator(AbstractShortUrlGenerator):
         )
         try:
             self.table.get_url(short_url=short_url)
-        except ShortURLNotFound:
+        except ShortUrlNotFoundOnTable:
             self.logger.info(f"Short url '{short_url}' is good to go")
             return False
         except Exception as e:
