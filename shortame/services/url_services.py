@@ -100,11 +100,11 @@ class UrlShortener(AbstractUrlShortener):
             self._add_on_cache(url)
             return url
 
+    def _persist_on_table(self, url: Url) -> bool:
+        return self.table.add_url(url)
+
     def _fetch_new_short_url(self) -> str:
         return self.queue.deque_short_url_key()
-
-    def _persist_on_table(self, url: Url) -> None:
-        return self.table.add_url(url)
 
     def _add_on_cache(self, url: Url) -> None:
         return self.cache.add(url)

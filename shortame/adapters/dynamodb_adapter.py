@@ -7,7 +7,6 @@ import boto3
 from botocore.exceptions import ClientError
 from loguru import logger
 from loguru._logger import Logger
-# from moto import mock_dynamodb
 from mypy_boto3_dynamodb.service_resource import DynamoDBServiceResource, Table
 
 from shortame.config import settings
@@ -21,16 +20,6 @@ dyn_resource = boto3.resource(
     region_name=settings.aws_region_name,
 )
 
-
-# @mock_dynamodb
-# def get_fake_dyn_resource():
-#     return boto3.resource(
-#         "dynamodb",
-#         aws_access_key_id="fake_id",
-#         aws_secret_access_key="fake_key",
-#         aws_session_token="fake_session",
-#         region_name="sa-east1",
-#     )
 class ShortUrlNotFoundOnTable(Exception):
     pass
 
@@ -50,30 +39,6 @@ class AbstractDynamoDBUrlTable(ABC):
     def get_url(self):
         pass
 
-
-# class FakeUrlTable(AbstractDynamoDBUrlTable):
-#     def __init__(
-#         self,
-#         dyn_resource: DynamoDBServiceResource = get_fake_dyn_resource(),
-#         table_name: str = "url",
-#         logger: Logger = logger,
-#     ):
-#         self.dyn_resource = dyn_resource
-#         self.table_name = table_name
-#         self.logger = logger
-#         self.table = self._load_table(self.table_name)
-
-#     def _load_table(self, table_name: str):
-#         return self.dyn_resource.Table(table_name)
-
-#     def add_url(self, url: Url):
-#         self.table.put_item(Item=asdict(url))
-
-#     def get_url(self, short_url: str) -> dict[str, str, str, str] | None:
-#         response = self.table.get_item(Key={"short_url": short_url})
-#         return response.get("Item")
-
-
 class UrlTable(AbstractDynamoDBUrlTable):
     """Encapsulates an Amazon DynamoDB table of shortened urls."""
 
@@ -92,9 +57,9 @@ class UrlTable(AbstractDynamoDBUrlTable):
         self.dyn_resource = dyn_resource
         self.table_name = table_name
         self.logger = logger
-        self.table = self._load_table(table_name)
+        self.table = self._load_table()
 
-    def _load_table(self, table_name: str) -> Table:
+    def _load_table(self) -> Table:
         """Tries to load a table using the table's name."""
         try:
             self.logger.info(f"Attempting to load table '{self.table_name}'")
@@ -113,7 +78,7 @@ class UrlTable(AbstractDynamoDBUrlTable):
         else:
             return table
 
-    def add_url(self, url: Url) -> None:
+    def add_url(self, url: Url) -> bool:
         """Add Url object to the database."""
         try:
             self.logger.info(f"Adding url {url.short_url} to database")
@@ -127,6 +92,8 @@ class UrlTable(AbstractDynamoDBUrlTable):
             )
             self.logger.error(f"Here's why: {error_code}: {error_message}")
             raise
+        else:
+            return True
 
     def get_url(self, short_url: str) -> Dict[str, str] | None:
         """
