@@ -42,31 +42,6 @@ class AbstractCacheQueue(ABC):
     def get(self):
         pass
 
-
-class FakeShortUrlQueue(AbstractUrlQueue):
-    """Fake implementation of a ShortURLQueue for testing purposes."""
-
-    def __init__(
-        self,
-        redis_client: FakeStrictRedis = FakeStrictRedis(version=7),
-        queue_name: str = "available_urls",
-        logger: Logger = logger,
-    ):
-        self.redis_client = redis_client
-        self.queue_name = queue_name
-        self.logger = logger
-
-    def deque_short_url_key(self):
-        key = self.redis_client.rpop(self.queue_name)
-        return key.decode("utf-8")
-
-    def enqueue_short_url_key(self, short_url: str) -> int:
-        return self.redis_client.lpush(self.queue_name, short_url)
-
-    def current_size(self, short_url: str) -> int:
-        return self.redis_client.llen(self.queue_name)
-
-
 class FakeCacheQueue(AbstractCacheQueue):
     def __init__(
         self,

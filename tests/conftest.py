@@ -2,16 +2,25 @@ from dataclasses import asdict
 
 import boto3
 import pytest
+from fakeredis import FakeStrictRedis
 from moto import mock_dynamodb
 
 from shortame.domain.model import Url
 
-sample_url = Url(
-    short_url="abcd123", long_url="https://en.wikipedia.org/wiki/Hermeto_Pascoal"
-)
+
+@pytest.fixture
+def sample_url():
+    return Url(
+        short_url="abcd123", long_url="https://en.wikipedia.org/wiki/Hermeto_Pascoal"
+    )
 
 
-@pytest.fixture()
+@pytest.fixture
+def short_url_queue_name():
+    return "available_urls"
+
+
+@pytest.fixture
 def fake_dyn_resource():
     with mock_dynamodb():
         yield boto3.resource(
@@ -23,7 +32,7 @@ def fake_dyn_resource():
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_table(fake_dyn_resource):
     fake_dyn_table = fake_dyn_resource.create_table(
         AttributeDefinitions=[
@@ -37,6 +46,6 @@ def fake_table(fake_dyn_resource):
     fake_dyn_table.put_item(Item=asdict(sample_url))
 
 
-# @pytest.fixture()
-# def fake_url_table(fake_dyn_resource):
-#     yield UrlTable(dyn_resource=fake_dyn_resource, table_name='url')
+@pytest.fixture
+def fake_redis_client():
+    return FakeStrictRedis(version=7)

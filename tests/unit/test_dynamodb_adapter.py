@@ -4,8 +4,6 @@ import pytest
 
 from shortame.adapters.dynamodb_adapter import (ShortUrlNotFoundOnTable,
                                                 UrlTable)
-from shortame.domain.model import Url
-from tests.conftest import sample_url
 
 
 def test_url_table_loads_the_correct_table(fake_dyn_resource, fake_table):
@@ -20,27 +18,24 @@ def test_url_table_loads_the_correct_table(fake_dyn_resource, fake_table):
     assert not_ok_url_table.table_name != fake_dyn_resource.Table("url").table_name
 
 
-def test_url_table_can_add_url(fake_dyn_resource, fake_table):
-    short_url = "xyz1234"
-    long_url = "https://www.google.com"
+def test_url_table_can_add_url(fake_dyn_resource, fake_table, sample_url):
     table_name = "url"
 
     url_table = UrlTable(dyn_resource=fake_dyn_resource, table_name=table_name)
-    url = Url(short_url=short_url, long_url=long_url)
 
-    assert url_table.add_url(url) is True
+    assert url_table.add_url(sample_url) is True
 
     not_ok_url_table = UrlTable(
         dyn_resource=fake_dyn_resource, table_name="wrong_table"
     )
 
     with pytest.raises(AttributeError) as excinfo:
-        not_ok_url_table.add_url(url)
+        not_ok_url_table.add_url(sample_url)
 
     assert str(excinfo.value) == "'NoneType' object has no attribute 'put_item'"
 
 
-def test_url_table_can_get_url(fake_dyn_resource, fake_table):
+def test_url_table_can_get_url(fake_dyn_resource, fake_table, sample_url):
     table_name = "url"
     short_url = sample_url.short_url
 
