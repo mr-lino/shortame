@@ -42,33 +42,6 @@ class AbstractCacheQueue(ABC):
     def get(self):
         pass
 
-class FakeCacheQueue(AbstractCacheQueue):
-    def __init__(
-        self,
-        redis_client: FakeStrictRedis = FakeStrictRedis(version=7),
-        logger: Logger = logger,
-    ):
-        self.redis_client = redis_client
-        self.logger = logger
-        self.ttl = 30 * 24 * 60 * 60
-
-    def add(self, url: Url):
-        try:
-            self.redis_client.set(url.short_url, url.long_url, ex=self.ttl)
-        except Exception as e:
-            raise e
-
-    def get(self, short_url: str) -> str:
-        try:
-            long_url = self.redis_client.get(short_url)
-        except Exception as e:
-            raise e
-        else:
-            if not long_url:
-                raise ShortUrlNotFoundOnCache
-            return long_url.decode("utf-8")
-
-
 class ShortUrlQueue(AbstractUrlQueue):
     """Encapsulates the Redis queue containing available short urls"""
 
