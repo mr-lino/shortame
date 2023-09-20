@@ -33,7 +33,7 @@ def fake_dyn_resource():
 
 
 @pytest.fixture
-def fake_table(fake_dyn_resource):
+def fake_table(fake_dyn_resource, sample_url):
     fake_dyn_table = fake_dyn_resource.create_table(
         AttributeDefinitions=[
             {"AttributeName": "short_url", "AttributeType": "S"},
