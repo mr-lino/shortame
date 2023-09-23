@@ -5,10 +5,9 @@ import pytest
 from fakeredis import FakeStrictRedis
 from moto import mock_dynamodb
 
-from shortame.domain.model import Url
-from shortame.adapters.redis_adapter import ShortUrlQueue, CacheQueue
 from shortame.adapters.dynamodb_adapter import UrlTable
-from shortame.services.key_generation_services import ShortUrlGenerator
+from shortame.adapters.redis_adapter import CacheQueue, ShortUrlQueue
+from shortame.domain.model import Url
 
 
 @pytest.fixture
@@ -53,13 +52,18 @@ def fake_table(fake_dyn_resource, sample_url):
 def fake_redis_client():
     return FakeStrictRedis(version=7)
 
+
 @pytest.fixture
 def fake_short_url_queue(fake_redis_client, short_url_queue_name):
-    return ShortUrlQueue(redis_client=fake_redis_client, queue_name=short_url_queue_name)
+    return ShortUrlQueue(
+        redis_client=fake_redis_client, queue_name=short_url_queue_name
+    )
+
 
 @pytest.fixture
 def fake_url_table(fake_dyn_resource, fake_table):
-    return UrlTable(dyn_resource=fake_dyn_resource, table_name='url')
+    return UrlTable(dyn_resource=fake_dyn_resource, table_name="url")
+
 
 @pytest.fixture
 def fake_cache(fake_redis_client):

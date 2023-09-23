@@ -58,6 +58,7 @@ def test_cache_queue_can_add(fake_redis_client, sample_url):
         "utf-8"
     )
     assert cache.ttl >= fake_redis_client.ttl(sample_url.short_url)
+    assert fake_redis_client.ttl(sample_url.short_url) > -1
 
 
 def test_cache_queue_can_get(fake_redis_client, sample_url):
