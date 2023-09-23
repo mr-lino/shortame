@@ -9,6 +9,8 @@ from pydantic import HttpUrl
 
 from shortame.config import settings
 from shortame.services.url_services import UrlShortener
+from shortame.adapters.redis_adapter import ShortUrlQueue, CacheQueue
+from shortame.adapters.dynamodb_adapter import UrlTable
 
 logger.add(sink="app.log")
 
@@ -24,7 +26,10 @@ app.add_middleware(
     CORSMiddleware, allow_origins=ORIGINS, allow_methods=METHODS, allow_headers=HEADERS
 )
 
-shortener = UrlShortener()
+queue = ShortUrlQueue()
+table = UrlTable()
+cache = CacheQueue()
+shortener = UrlShortener(queue=queue, table=table, cache=cache)
 
 
 @app.post("/url", status_code=status.HTTP_200_OK)
