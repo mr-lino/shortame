@@ -5,6 +5,7 @@ In case you're wondering, shortame stands for: Ye**S**, s**HOR**tame is a **T**e
 Index:
 
 1. [Overview](#overview)
+	1. [Infrastructure](#infrastructure)
 1. [Installation](#installation)
 1. [Observations](#observations)
 
@@ -23,7 +24,16 @@ Shortame is URL shortener composed by 2 services: a FastAPI App and key generato
 	- It uses the keys created by the Key Generator service as the short URL.
 	- There are 2 routes in the service:
 		- `POST`: `/url` - users send a long URL in the body and receives a short version of it.
-		- `GET`: `/` - a redirect route, which will send users to the original long URL. 
+		- `GET`: `/` - a redirect route, which will send users to the original long URL.
+	- On redirect, shortame will first check if the url is present on cache. If not, then it will search for it in the DynamoDB database.
+
+### Infrastructure
+
+- DynamoDB:
+	- Where all of the pairs short:long URLs are persisted.
+- Redis:
+	- Caching for the redirecting (`GET`) part of the FastAPI app.
+	- Contains a list of short paths (keys) to be used in the `/url` part of the FastAPI app.
 
 ## Installation
 
@@ -45,3 +55,4 @@ The project should be available at `http://127.0.0.1:5000/docs`
 
 ## Observations
 - Why 7 characters, and not 8 or 6?
+- Why DynamoDB and not a relational database?
